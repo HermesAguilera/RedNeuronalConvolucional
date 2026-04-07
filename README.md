@@ -81,7 +81,7 @@ Se implementa una transformación simple antes del entrenamiento:
 - Mejora la generalización del modelo ante diferentes orientaciones.
 
 ## Inicialización y optimización
-- `learning_rate = 0.15`
+- `learning_rate = 0.10`
 - `batch_size = 32`
 - pesos inicializados con `0.1 * np.random.randn(...)`
 
