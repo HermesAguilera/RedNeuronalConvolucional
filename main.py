@@ -9,15 +9,17 @@ from model import CNN
 
 
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
-CONFIDENCE_THRESHOLD = 0.25
-IMAGE_SIZE = (32, 32)
+CONFIDENCE_THRESHOLD = 0.20
+IMAGE_SIZE = (64, 64)
 EXPECTED_NUM_CLASSES = 5
 
 
 def preprocess_image(image_path, image_size=IMAGE_SIZE):
-    img = Image.open(image_path).convert("L")
+    img = Image.open(image_path).convert("RGB")
     img = img.resize(image_size, Image.Resampling.BILINEAR)
     arr = np.asarray(img, dtype=np.float32) / 255.0
+    # Per-channel normalization to make optimization more stable with RGB inputs.
+    arr = (arr - 0.5) / 0.5
     return arr
 
 
@@ -61,7 +63,7 @@ def load_images_from_directory(data_dir, image_size=IMAGE_SIZE, class_names=None
 
     x = np.array(x_data, dtype=np.float32)
     y = np.array(y_data, dtype=np.int64)
-    x = x[:, np.newaxis, :, :]
+    x = np.transpose(x, (0, 3, 1, 2))
 
     return x, y, class_names
 
@@ -92,22 +94,22 @@ def accuracy_with_threshold(pred_outputs, y_true):
     return float(acc), float(reject_rate)
 
 
-def build_cnn(num_classes=EXPECTED_NUM_CLASSES, learning_rate=0.15, confidence_threshold=CONFIDENCE_THRESHOLD):
+def build_cnn(num_classes=EXPECTED_NUM_CLASSES, learning_rate=0.1, confidence_threshold=CONFIDENCE_THRESHOLD):
     model = CNN(num_classes=num_classes, confidence_threshold=confidence_threshold)
 
-    model.add(ConvolutionalLayer(input_shape=(1, 32, 32), num_filters=4, filter_size=3, stride=1, padding=0, learning_rate=learning_rate))
+    model.add(ConvolutionalLayer(input_shape=(3, 64, 64), num_filters=8, filter_size=3, stride=2, padding=1, learning_rate=learning_rate))
     model.add(ReLU())
     model.add(PoolingLayer(pool_size=2, stride=2))
 
-    model.add(ConvolutionalLayer(input_shape=(4, 15, 15), num_filters=8, filter_size=3, stride=1, padding=0, learning_rate=learning_rate))
+    model.add(ConvolutionalLayer(input_shape=(8, 16, 16), num_filters=16, filter_size=3, stride=2, padding=1, learning_rate=learning_rate))
     model.add(ReLU())
     model.add(PoolingLayer(pool_size=2, stride=2))
 
-    model.add(ConvolutionalLayer(input_shape=(8, 6, 6), num_filters=16, filter_size=3, stride=1, padding=0, learning_rate=learning_rate))
+    model.add(ConvolutionalLayer(input_shape=(16, 4, 4), num_filters=32, filter_size=3, stride=1, padding=1, learning_rate=learning_rate))
     model.add(ReLU())
     model.add(PoolingLayer(pool_size=2, stride=2))
 
-    model.add(DenseLayer(input_size=16 * 2 * 2, output_size=32, learning_rate=learning_rate))
+    model.add(DenseLayer(input_size=32 * 2 * 2, output_size=32, learning_rate=learning_rate))
     model.add(ReLU())
     model.add(DenseLayer(input_size=32, output_size=num_classes, learning_rate=learning_rate))
     model.add(Softmax())
@@ -117,7 +119,7 @@ def build_cnn(num_classes=EXPECTED_NUM_CLASSES, learning_rate=0.15, confidence_t
 
 def predict_image_file(model, image_path, class_names, confidence_threshold=CONFIDENCE_THRESHOLD, image_size=IMAGE_SIZE):
     img_arr = preprocess_image(image_path, image_size=image_size)
-    x = img_arr[np.newaxis, np.newaxis, :, :]
+    x = np.transpose(img_arr, (2, 0, 1))[np.newaxis, :, :, :]
     preds, probs = model.predict(x, confidence_threshold=confidence_threshold)
     return preds[0], probs[0]
 
@@ -162,8 +164,8 @@ def main():
 
     x_train_aug = random_horizontal_flip_batch(x_train, flip_prob=0.5)
 
-    model = build_cnn(num_classes=len(class_names), learning_rate=0.15, confidence_threshold=CONFIDENCE_THRESHOLD)
-    model.fit(x_train_aug, y_train, epochs=12, batch_size=32, verbose=True, shuffle=True)
+    model = build_cnn(num_classes=len(class_names), learning_rate=0.1, confidence_threshold=CONFIDENCE_THRESHOLD)
+    model.fit(x_train_aug, y_train, epochs=35, batch_size=16, verbose=True, shuffle=True)
 
     preds, probs = model.predict(x_test, confidence_threshold=CONFIDENCE_THRESHOLD)
     acc_valid, reject_rate = accuracy_with_threshold(preds, y_test)
