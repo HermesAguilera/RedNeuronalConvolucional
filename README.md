@@ -22,10 +22,10 @@ La red incluye:
 - capa de salida con `Softmax`
 
 La arquitectura general es:
-- Entrada `32x32` en escala de grises
-- Conv(4 filtros, 3x3) + ReLU + MaxPool
+- Entrada `64x64` en RGB
 - Conv(8 filtros, 3x3) + ReLU + MaxPool
 - Conv(16 filtros, 3x3) + ReLU + MaxPool
+- Conv(32 filtros, 3x3) + ReLU + MaxPool
 - Dense 32 -> ReLU
 - Dense `num_classes` -> Softmax
 
