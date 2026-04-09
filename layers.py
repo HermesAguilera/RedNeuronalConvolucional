@@ -81,7 +81,7 @@ class ConvolutionalLayer(Layer):
         else:
             d_input = padded_input_grad
 
-        # SGD parameter update
+
         self.filters -= self.learning_rate * (d_filters / batch_size)
         self.biases -= self.learning_rate * (d_biases / batch_size)
 
@@ -147,7 +147,6 @@ class DenseLayer(Layer):
         self.input_shape = None
 
     def forward(self, input_data):
-        # input_data shape: (batch, input_size) or (batch, d, h, w)
         self.input_shape = input_data.shape
         if input_data.ndim > 2:
             self.input = input_data.reshape(input_data.shape[0], -1)

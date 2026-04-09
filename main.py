@@ -18,7 +18,6 @@ def preprocess_image(image_path, image_size=IMAGE_SIZE):
     img = Image.open(image_path).convert("RGB")
     img = img.resize(image_size, Image.Resampling.BILINEAR)
     arr = np.asarray(img, dtype=np.float32) / 255.0
-    # Per-channel normalization to make optimization more stable with RGB inputs.
     arr = (arr - 0.5) / 0.5
     return arr
 
